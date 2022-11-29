@@ -1,0 +1,307 @@
+from datetime import date
+from django.contrib import admin
+from django.core.validators import MinValueValidator, MaxValueValidator
+from django.db import models
+from django.db.models import Max
+from django.utils import timezone
+
+# Create your models here.
+
+# TODO: Overide method get_absolute_url() for all models
+
+# COUNTRY
+class Country(models.Model):
+    """Country represents an official country of the world. To be used as part of an Address."""
+
+    # 2-character code that represents a country (according to ISO 3166-1). For example 'LU', 'FR', 'DE', 'BE', etc.
+    iso_code = models.CharField('Code ISO 3166-1', max_length=2, unique=True)
+
+    # Full name of the country. For example 'Luxembourg', 'France'
+    name = models.CharField('Pays', max_length=100)
+
+    class Meta:
+        """ Defines useful meta information for the admin web application  """
+        ordering = ['iso_code']
+        verbose_name_plural = "Countries"
+
+    def __str__(self) -> str:
+        """Returns the country's name"""
+        return '{0} ({1})'.format(self.name, self.iso_code)
+
+    @property
+    def to_string(self):
+        """Returns the same value as __str__, and can be used in a django template."""
+        return self.__str__()
+
+
+# ADDRESS
+class Address(models.Model):
+    """Address represents a postal address. Used to represent the home address of a Member, or the billing address of a Clubs"""
+
+    # First line of the postal address, usually used for street name, house number, appartment number
+    street_line1 = models.CharField('Adresse (ligne 1: rue, numéro)', max_length=100)
+
+    # Second line of the postal address, usually used for a c/o name, or building name, department name, etc.
+    street_line2 = models.CharField('Adresse (ligne 2)', max_length=100, blank=True, default="")
+
+    # Name of the city/village/locality 
+    city = models.CharField('Localité', max_length=100)
+
+    # Zip code (code postal)
+    zip_code = models.CharField('Code postal', max_length=20)
+
+    # Reference to the Country. Defaults to 'Luxembourg'
+    country = models.ForeignKey(to=Country, on_delete=models.RESTRICT, verbose_name='Pays', default=1)
+
+    #member 'attribute' can be used to point back to the associated Member, if the address belongs to a Member
+
+    class Meta:
+        """ Defines useful meta information for the admin web application  """
+        ordering = ['country', 'zip_code']
+        verbose_name_plural = "Addresses"
+
+    @admin.display(description='Entité parente')
+    def get_parent(self) -> str:
+        if hasattr(self, 'member'):
+            return self.member.__str__()
+        if hasattr(self, 'club_legal'):
+            return self.club_legal.__str__()
+        if hasattr(self, 'club_billing'):
+            return self.club_legal.__str__()
+        if hasattr(self, 'cert_auth'):
+            return self.cert_auth.__str__()
+ 
+    def __str__(self) -> str:
+        """Returns a string that identifies this address. Includes the street_line1, zip_code, city and country code."""
+        return '{0}, {3}-{1} {2}'.format(self.street_line1, self.zip_code, self.city, self.country.iso_code)
+
+    @property
+    def to_string(self):
+        """Returns the same value as __str__, and can be used in a django template."""
+        return self.__str__()
+
+# MEMBER
+class Member(models.Model):
+    """Member represents a physical person that is a member of the federation"""
+
+    # Constants that represent the possible states of a Member
+    ACTIVE = "ACT"
+    INACTIVE = "INA"
+    # Possible states and their human-readable meaning
+    STATE_CHOICES = [(ACTIVE, "Actif"), (INACTIVE, "Inactif")]
+    # State of a Member
+    state = models.CharField(max_length=3, choices=STATE_CHOICES, default=ACTIVE)
+
+    # Constants that represent the possible titles of a Member
+    MONSIEUR = "MONS"
+    MADAME = "MADA"
+    HERR = "HERR"
+    FRAU = "FRAU"
+    # Possible states and their human-readable meaning
+    TITLE_CHOICES = [(MONSIEUR, "M."), (MADAME, "Mme."), (HERR, "Hr."), (FRAU, "Fr.")]
+    # Title of a Member
+    title = models.CharField('Titre', max_length=4, choices=TITLE_CHOICES, blank=True, default="")
+
+    # First Name
+    first_name = models.CharField('Prénom', max_length=100)
+
+    # Last name
+    last_name = models.CharField('Nom', max_length=100)
+
+    # Constants that represent the possible sexes of a Member
+    MALE = "M"
+    FEMALE = "F"
+    UNKNOWN = "U"
+    # Possible sexes and their human-readable meaning
+    SEX_CHOICES = [(MALE, "M"), (FEMALE, "F"), (UNKNOWN, "_")]
+    # Sex of a Member
+    sex = models.CharField('Genre', max_length=1, choices=SEX_CHOICES, default=UNKNOWN)
+
+    # Birth date
+    birth_date = models.DateField('Date de naissance', blank=True, default="1900-01-01")
+
+    # Social Security Number (matricule national)
+    # Normally we should make this field UNIQUE, but as many entries do not have a value, we cannot set a constraint at database level.
+    ssn = models.PositiveBigIntegerField('Matricule (SSN)', blank=True, default=0)
+
+    # Reference to the home address (one-to-one)
+    home_address = models.OneToOneField(to=Address, on_delete=models.CASCADE, related_name="member")
+
+    class Meta:
+        """ Defines useful meta information for the admin web application  """
+        ordering = ['last_name', 'first_name', 'birth_date']
+        verbose_name_plural = "Members"
+
+    def __str__(self) -> str:
+        """Returns the member's full name, i.e. last name and first name."""
+        return '{1}, {0}'.format(self.first_name, self.last_name)
+
+    @property
+    def to_string(self):
+        """Returns the same value as __str__, and can be used in a django template."""
+        return self.__str__()
+
+# ACTIVITY
+class Activity(models.Model):
+    """Activity represents an underwater activity such as scuba diving, free diving, or underwater rugby."""
+
+    # Short name (4 character code) for the activity
+    short_name = models.CharField('Code Activité', max_length=4, unique=True)
+
+    # Full name
+    full_name = models.CharField('Nom complet', max_length=100)
+
+    # Detailed description of the activity
+    description = models.TextField('Description', blank=True, default="")
+
+    class Meta:
+        """ Defines useful meta information for the admin web application  """
+        ordering = ['short_name']
+        verbose_name_plural = "Activities"
+
+    def __str__(self) -> str:
+        """Returns the Activity's full name, followed by the short name in parentesis."""
+        return '{0} ({1})'.format(self.full_name, self.short_name)
+
+    @property
+    def to_string(self):
+        """Returns the same value as __str__, and can be used in a django template."""
+        return self.__str__()
+
+
+
+# CLUB
+class Club(models.Model):
+    """Club represents an association that organises underwater activities."""
+
+    # Constants that represent the possible states of a club
+    ACTIVE = "ACT"
+    INACTIVE = "INA"
+    # Possible states and their human-readable meaning
+    STATE_CHOICES = [(ACTIVE, "Actif"), (INACTIVE, "Inactif")]
+    # State of a Club
+    state = models.CharField(max_length=3, choices=STATE_CHOICES, default=ACTIVE)
+
+    # Short name
+    short_name = models.CharField('Code Club', max_length=10, unique=True)
+
+    # Full name of the association including the raison sociale
+    full_name = models.CharField('Nom de l\'association', max_length=100)
+
+    # Reference to the legal address
+    legal_address = models.OneToOneField(to=Address, on_delete=models.PROTECT, related_name="club_legal")
+
+    # Reference to the billing address
+    billing_address = models.OneToOneField(to=Address, on_delete=models.SET_NULL, related_name="club_billing", null=True, blank=True)
+
+    # References to one or more activities that the club is managing
+    activities = models.ManyToManyField(to=Activity)
+
+    # main email address
+    email = models.EmailField('E-mail', max_length=100, blank=True, default="")
+
+    # web site
+    website = models.URLField('Site web', max_length=100, blank=True, default="")
+
+    class Meta:
+        """ Defines useful meta information for the admin web application  """
+        ordering = ['short_name']
+        verbose_name_plural = "Clubs"
+
+    def __str__(self) -> str:
+        """Returns the Clubs's short name followed by the full name."""
+        return '{1} ({0})'.format(self.full_name, self.short_name)
+
+    @property
+    def to_string(self):
+        """Returns the same value as __str__, and can be used in a django template."""
+        return self.__str__()
+
+    @property
+    def activity_list(self, separator="|") -> str:
+        """ Returns a list of codes identifying the activities of this club.
+        
+            The elements are separated by the string provided as keyword argument 'separator'.
+            The default value for 'separator' is '|'.
+        """
+        s = ''
+        for activity in self.activities.all().order_by('short_name'):
+            if len(s) != 0:
+                s += separator
+            s += activity.short_name
+        if len(s) == 0:
+                s = "_"
+        return s
+
+# LICENCE
+class Licence(models.Model):
+    """Licence represents an annual licence delivered by the federation to a club member.
+
+       A Licence is delivered to a Member on request from a Club.
+       The federation does not manage the membership of the members within their club.
+       The federation only manages the relationship between a Member and a Club through this Licence."""
+
+    def default_year() -> int:
+        """ Calculates the default value for the licence year.
+
+            IF today is between Sep-01 and Dec-31 THEN licence_year = next_year ELSE licence_year = current_year.
+        """
+        tday =  timezone.now()
+        if tday.month < 9:
+            return tday.year
+        return tday.year + 1
+
+    def default_number() -> int:
+        """ Find out what the biggest licence number is for this years' Licences. """
+        dic = Licence.objects.filter(licence_year=Licence.default_year()).aggregate(mx=Max('licence_number'))
+        # d contains a dictionary with one element which has key='mx' and value = <the maximum value of the field 'licence_number'>
+        return dic['mx'] + 1
+    
+    # The year for which this licence is valid
+    licence_year = models.IntegerField(
+        'Licence pour l\'année',
+        default=default_year,
+        validators=[MinValueValidator(limit_value=1900), MaxValueValidator(limit_value=2122)],
+    )
+
+    # Federation licence number (based on a sequence that is reset every year)
+    licence_number = models.PositiveIntegerField(
+        'Numéro de licence',
+        default=default_number,
+        validators=[MinValueValidator(limit_value=1), MaxValueValidator(limit_value=999999)],
+    )
+
+    # licence validity start date, defaults to today
+    validity_start_date = models.DateField('Date de début de validité', default=timezone.now())
+    # TODO: add a validator that checks that the start date is BEFORE the validity_end_date
+    # TODO: add a post-processor that sets a default value for the validity_end_date that is one year after the start date,
+    #   IF the validity_end_date has a value that is BEFORE the validity_start_date.
+    #   IF teh validity_end_date already has a value that is AFTER the validity_start_date, then do nothing
+    # Licence validity end date, defaults to Dec 31st of the licence_year
+
+    validity_end_date = models.DateField('Date de fin de validité', default=date(default_year(), 12, 31))
+    # TODO: add a validator that checks that the validity_end_date is AFTER the validity_start_date
+
+    # Reference to the Member who is entitled to this licence
+    member = models.ForeignKey(to=Member, on_delete=models.PROTECT)
+
+    # Reference to the Club who requested (and will be billed for) this licence
+    club = models.ForeignKey(to=Club, on_delete=models.PROTECT)
+
+    class Meta:
+        """ Defines useful meta information for the admin web application  """
+        ordering = ['-licence_year', '-licence_number']
+        verbose_name_plural = "Licences"
+
+    @admin.display(description='Numéro de Licence')
+    def get_number(self) -> str:
+        return '{0}-{1:06d}'.format(self.licence_year, self.licence_number)
+    
+    def __str__(self) -> str:
+        """Returns a string that represents this Licence. It contains the licence number, member name and club name."""
+        return '{0} | {1} | {2}'.format(self.get_number(), self.member, self.club)
+
+    @property
+    def to_string(self):
+        """Returns the same value as __str__, and can be used in a django template."""
+        return self.__str__()
