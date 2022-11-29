@@ -18,7 +18,6 @@ class ProtectedResource(Condition):
     def rare_work(self, name: str):
         print(name, end=" ")
 
-
 class SimpleThread(Thread):
 
     resource: ProtectedResource
