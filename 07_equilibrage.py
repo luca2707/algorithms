@@ -10,8 +10,6 @@
 import unittest
 import logging
 
-logging.basicConfig(format="%(asctime)s %(levelname)s:%(message)s", level=logging.DEBUG)
-
 def split_list(in_list: list[int]) -> tuple(list[int]):
     """ This function takes as input a list of integers, and splits the input list in two.
         The function returns a tuple with 2 elements that contain the 2 lists of integers
@@ -83,6 +81,8 @@ class TestSplitList(unittest.TestCase):
         expected = ((123345), (52345))
         self.assertEqual(split_list(in_list), expected)
 
+logging.basicConfig(format="%(asctime)s %(levelname)s:%(message)s", level=logging.DEBUG)
+logging.debug("Top-level code environment __name__='{}'".format(__name__))
 # The following instruction will automatically launch any tests that are defined in this module
 if __name__ == '__main__':
     unittest.main()
