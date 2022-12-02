@@ -92,6 +92,34 @@ class TestMatrixSort(unittest.TestCase):
         expected = [1, 2, 2, 4, 6, 6, 11, 12, 14, 15, 15, 18]
         self.assertEqual(matrix_sort(input_matrix), expected)
 
+    def test_matrix_sort_empty_1(self):
+        input_matrix = ()
+        expected = []
+        self.assertEqual(matrix_sort(input_matrix), expected)
+
+    def test_matrix_sort_empty_2(self):
+        input_matrix = ((), (), ())
+        expected = []
+        self.assertEqual(matrix_sort(input_matrix), expected)
+    
+    def test_matrix_sort_4(self):
+        input_matrix = ((1, ), (4, ), (7, ))
+        expected = [1, 4, 7]
+        self.assertEqual(matrix_sort(input_matrix), expected)
+
+    def test_matrix_sort_5(self):
+        input_matrix = ((1, 4, 7))
+        expected = [1, 4, 7]
+        self.assertEqual(matrix_sort(input_matrix), expected)
+
+    def test_matrix_sort_5(self):
+        # Tests that the code within the body of the with statement raises a RuntimeError
+        # (because the matrix passed as input argument is not well formed).
+        with self.assertRaises(RuntimeError):
+            input_matrix = ((1, 4, 7),
+                            (2, 5))
+            matrix_sort(input_matrix)
+
 if __name__ == '__main__':
     unittest.main()
 
