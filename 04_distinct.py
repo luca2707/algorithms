@@ -15,7 +15,7 @@ else:
 if len(input_string) < 2:
     print("Longest distinct string contained in '{}' is {}".format(input_string, input_string))
 
-# The following variables will store the coordinates of all the longest 'distinct' string
+# The following variables will store the coordinates of the longest 'distinct' string
 # that is found in the input_string.
 # max_start will hold the start index of the distinct string
 # max_length will hold the length of the distinct string.
