@@ -13,8 +13,8 @@ from sys import argv
 # Define a FIFO buffer class
 class FifoBuffer():
     
-    max_size = 10
-    lines = []
+    max_size: int
+    lines = list()
 
     def __init__(self, max_size = 10) -> None:
         self.max_size = max_size
